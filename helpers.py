@@ -1,9 +1,6 @@
 # various helper functions to keep main.py clean
-import numpy as np
 
 import main
-import streamlit as st
-import datetime
 import joblib
 from os import path
 import pandas as pd
