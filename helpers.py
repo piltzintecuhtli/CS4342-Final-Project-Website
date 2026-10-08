@@ -4,6 +4,9 @@ import main
 import joblib
 from os import path
 import pandas as pd
+import torch
+import torch.nn as nn
+import numpy as np
 
 def format_data(data):
     # formatting data for model input
@@ -145,8 +148,54 @@ def scale_data(data):
     scaled_data = scaler.transform(data[num_cols])
     return scaled_data
 
-def run_model(data):
-    model = joblib.load(path.join("model_data", "log_reg_model.pkl"))
-    pred = model.predict(data)
-    prob = model.predict_proba(data)[:1]
-    return pred, prob
+def run_model(data, model):
+    prob = 0
+    if model == "Logistic Regression":
+        model = joblib.load(path.join("model_data", "log_reg_model.pkl"))
+        prob = model.predict_proba(data)[:1].item(0)
+    if model == "CNN":
+        deployed_model = FraudNN(54)
+        deployed_model.load_state_dict(torch.load(path.join('model_data', 'fraud_nn_model.pth')))
+        deployed_model.eval()  # Set to evaluation mode (disables dropout)
+
+        # data = torch.from_numpy(data)
+
+        # Convert to PyTorch Tensor and reshape to (1, num_features) to represent a batch size of 1
+        input_tensor = torch.tensor(data.astype(np.float32).to_numpy())
+
+        # 4. Run inference
+        with torch.no_grad():
+            fraud_probability = deployed_model(input_tensor).item()
+
+        prob = fraud_probability
+    return prob
+
+
+class FraudNN(nn.Module):
+    def __init__(self, input_dim):
+        super(FraudNN, self).__init__()
+
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.relu1 = nn.ReLU()
+        self.dropout1 = nn.Dropout(0.2)
+
+        self.fc2 = nn.Linear(64, 32)
+        self.relu2 = nn.ReLU()
+        self.dropout2 = nn.Dropout(0.2)
+
+
+        self.fc3 = nn.Linear(32, 1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        out = self.fc1(x)
+        out = self.relu1(out)
+        out = self.dropout1(out)
+
+        out = self.fc2(out)
+        out = self.relu2(out)
+        out = self.dropout2(out)
+
+        out = self.fc3(out)
+        out = self.sigmoid(out)
+        return out

@@ -13,16 +13,15 @@ num_cols = ["amount_usd", "hours_since_last_txn", "txn_count_last_24h", "distanc
                 "velocity_score", "time_of_day_hour", "day_of_week", "merchant_risk_score", "prior_disputes"]
 
 calculated = False
-pred, prob = 0, 0
+prob = 0
 
 st.header(":rainbow[🕵️ Welcome to the Credit Card Fraud Detector 🕵️]")
 st.subheader("Please enter the details of your transaction below and choose a model to calculate the chance of fraud")
 
 st.divider()
 
-model = st.selectbox("Choose a model", ["Logistic Regression"], key="sb-models")
+model = st.selectbox("Choose a model", ["Logistic Regression", "CNN"], key="sb-models")
 
-st.divider()
 
 with st.form("Transaction Details"):
     st.subheader("Transaction Details")
@@ -32,8 +31,7 @@ with st.form("Transaction Details"):
     channel = st.pills("Channel", channels, key="p-chan")
     device_type = st.pills("Device type", device_types, key="p-device-type")
     is_foreign_transaction = st.checkbox("Foreign transaction", False, key="check-foreign")
-    # TODO: change km to be km or miles
-    distance_from_home_km = st.number_input("Distance from home address the transaction made", 0, value=0,
+    distance_from_home_km = st.number_input("Distance from home address the transaction made in km", 0, value=0,
                                             key="number-dist")
     used_vpn = st.checkbox("VPN used", False, key="check-use-vpn")
     ip_country_mismatch = not (
@@ -41,7 +39,6 @@ with st.form("Transaction Details"):
     billing_shipping_mismatch = not (
         st.checkbox("Do the billing and shipping addresses match?", False, key="check-shipping-match"))
     cvv_retry_count = st.number_input("CVV retry times", 0, value=0, key="number-cvv-retry")
-    # TODO: potentially combine into one question
     time_of_day_hour = st.time_input("At what time did the purchase occur?", key="time-time-hour")
     day_of_week = st.selectbox("Day of the week", days_of_week, key="select-day-of-week")
 
@@ -69,26 +66,27 @@ with st.form("Transaction Details"):
     submitted = st.form_submit_button("Submit")
     if submitted:
         if merchant_category is None or card_type is None or channel is None or device_type is None:
-            st.write("Please ensure all fields have been filled out!")
+            st.error("Please ensure all fields have been filled out!")
 
         else:
             calculated = False
-            all_data = [amt_usd, is_foreign_transaction, hrs_since_last_trnsctn, trnsctn_count_past_24_hrs,
-                    distance_from_home_km, card_age, cust_age, acct_bal, is_new_merch,
-                    used_vpn, ip_country_mismatch, billing_shipping_mismatch, cvv_retry_count, velocity_score,
-                    time_of_day_hour, day_of_week, ai_scam_attempt, merchant_risk_score, prior_disputes,
-                    merchant_category, card_type, auth_method, channel, device_type]
-            all_data = helpers.format_data(all_data)
-            all_data[num_cols] = helpers.scale_data(all_data)
-            pred, prob = helpers.run_model(all_data)
+            with st.spinner("Calculating...", show_time=True):
+                all_data = [amt_usd, is_foreign_transaction, hrs_since_last_trnsctn, trnsctn_count_past_24_hrs,
+                        distance_from_home_km, card_age, cust_age, acct_bal, is_new_merch,
+                        used_vpn, ip_country_mismatch, billing_shipping_mismatch, cvv_retry_count, velocity_score,
+                        time_of_day_hour, day_of_week, ai_scam_attempt, merchant_risk_score, prior_disputes,
+                        merchant_category, card_type, auth_method, channel, device_type]
+                all_data = helpers.format_data(all_data)
+                all_data[num_cols] = helpers.scale_data(all_data)
+                prob = helpers.run_model(all_data, model)
 
             calculated = True
 
 if calculated:
-    if pred:
-        st.write(":red[This transaction was likely fraudulent!]")
+    if prob >= 0.5:
+        st.subheader(":red[This transaction was likely fraudulent!]")
     else:
-        st.write(":rainbow[This transaction was likely NOT fraudulent :D!]")
+        st.subheader(":rainbow[This transaction was likely NOT fraudulent :D!]")
 
-    st.write("Probability of being a fraudulent transaction: " + str(round(prob.item(0), 5)))
-    st.write("Probability of being a real transaction: " + str(round(prob.item(1), 5)))
+    st.write("Probability of being a fraudulent transaction: " + str(round(prob, 4)))
+    st.write("Probability of being a real transaction: " + str(round(1 - prob, 4)))
