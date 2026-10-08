@@ -151,19 +151,15 @@ def scale_data(data):
 def run_model(data, model):
     prob = 0
     if model == "Logistic Regression":
-        model = joblib.load(path.join("model_data", "log_reg_model.pkl"))
+        model = joblib.load(path.join("model_data", "log_reg_model_old.pkl"))
         prob = model.predict_proba(data)[:1].item(0)
     if model == "CNN":
         deployed_model = FraudNN(54)
         deployed_model.load_state_dict(torch.load(path.join('model_data', 'fraud_nn_model.pth')))
-        deployed_model.eval()  # Set to evaluation mode (disables dropout)
+        deployed_model.eval()
 
-        # data = torch.from_numpy(data)
-
-        # Convert to PyTorch Tensor and reshape to (1, num_features) to represent a batch size of 1
         input_tensor = torch.tensor(data.astype(np.float32).to_numpy())
 
-        # 4. Run inference
         with torch.no_grad():
             fraud_probability = deployed_model(input_tensor).item()
 

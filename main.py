@@ -60,7 +60,7 @@ with st.form("Transaction Details"):
     is_new_merch = st.checkbox("Was the merchant new at the time of purchase?", False, key="check-new-merch")
     merchant_risk_score = st.number_input("Merchant risk score", 0.0, 100.0, value=0.0, step=0.1, key="number-risk")
 
-    velocity_score = st.number_input("Velocity Score - idk what this is", 0, value=0, key="number-velocity-score")
+    velocity_score = st.number_input("Velocity Score", 0, value=0, key="number-velocity-score")
     ai_scam_attempt = st.checkbox("AI scam attempt?", False, key="check-ai-scam-attempt")
 
     submitted = st.form_submit_button("Submit")
